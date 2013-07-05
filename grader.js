@@ -22,9 +22,11 @@ References:
 */
 
 var fs = require('fs');
+var rest = require('restler');
 var program = require('commander');
 var cheerio = require('cheerio');
 var HTMLFILE_DEFAULT = "index.html";
+var URL_DEFAULT = "http://obscure-savannah-5768.herokuapp.com";
 var CHECKSFILE_DEFAULT = "checks.json";
 
 var assertFileExists = function(infile) {
@@ -34,6 +36,17 @@ var assertFileExists = function(infile) {
         process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
     }
     return instr;
+};
+
+var urlfun = function(result) {
+    return result
+};
+
+var assertUrlExists = function(apiurl) {
+    console.log(apiurl);
+//    console.log(apiurl.toString());
+    rest.get(apiurl).on('complete',urlfun);
+    return urlfun;
 };
 
 var cheerioHtmlFile = function(htmlfile) {
@@ -55,12 +68,33 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     return out;
 };
 
+
+var checkHtmlBuffer = function(htmlbuffer, checksfile) {
+    $ = cheerio.load(htmlbuffer);
+    var checks = loadChecks(checksfile).sort();
+    var out = {};
+    for(var ii in checks) {
+        var present = $(checks[ii]).length > 0;
+        out[checks[ii]] = present;
+    }
+    return out;
+};
+
+
 if(require.main == module) {
     program
         .option('-c, --checks ', 'Path to checks.json', assertFileExists, CHECKSFILE_DEFAULT)
         .option('-f, --file ', 'Path to index.html', assertFileExists, HTMLFILE_DEFAULT)
+        .option('-u, --url ', 'Path to url', assertUrlExists, URL_DEFAULT)
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
+    
+
+    console.log(program.url);    
+    
+    //var checkJson = checkHtmlFile(program.file, program.checks);
+    
+    var checkJson = checkHtmlBuffer(program.url, program.checks);
+    
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
 } else {
