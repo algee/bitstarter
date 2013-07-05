@@ -21,6 +21,7 @@ References:
    - https://developer.mozilla.org/en-US/docs/JSON#JSON_in_Firefox_2
 */
 
+var sys = require('util');
 var fs = require('fs');
 var rest = require('restler');
 var program = require('commander');
@@ -39,7 +40,11 @@ var assertFileExists = function(infile) {
 };
 
 var urlfun = function(result) {
-    return result
+    if (result instanceof Error) {
+       console.log('error: ' + result.message);
+    } else {
+       fs.writeFileSync('temp.html', result);
+    }
 };
 
 var assertUrlExists = function(apiurl) {
@@ -69,18 +74,6 @@ var checkHtmlFile = function(htmlfile, checksfile) {
 };
 
 
-var checkHtmlBuffer = function(htmlbuffer, checksfile) {
-    $ = cheerio.load(htmlbuffer);
-    var checks = loadChecks(checksfile).sort();
-    var out = {};
-    for(var ii in checks) {
-        var present = $(checks[ii]).length > 0;
-        out[checks[ii]] = present;
-    }
-    return out;
-};
-
-
 if(require.main == module) {
     program
         .option('-c, --checks ', 'Path to checks.json', assertFileExists, CHECKSFILE_DEFAULT)
@@ -89,11 +82,16 @@ if(require.main == module) {
         .parse(process.argv);
     
 
-    console.log(program.url);    
-    
-    //var checkJson = checkHtmlFile(program.file, program.checks);
-    
-    var checkJson = checkHtmlBuffer(program.url, program.checks);
+    if (program.file != undefined) {
+//       console.log(program.file);
+       var checkJson = checkHtmlFile(program.file, program.checks);
+    }
+
+    if (program.url != undefined) {
+//       console.log(program.url);
+       rest.get(program.url).on('complete',urlfun);
+       var checkJson = checkHtmlFile('temp.html', program.checks);
+    }    
     
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
